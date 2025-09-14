@@ -1,6 +1,18 @@
 <template>
   <div class="q-pa-md">
+    <!-- Add this scan type selection section -->
+    <div class="q-mb-md">
+      <div class="text-h6 q-mb-sm">
+        Select Document Type
+      </div>
+      <q-option-group
+        v-model="scanType"
+        :options="scanTypeOptions"
+        color="primary"
+        inline />
+    </div>
     <!-- Controls row, always visible -->
+
     <div class="row q-gutter-sm q-mb-md">
       <q-btn
         label="Start Scan"
@@ -20,9 +32,8 @@
       <OpticalScanner
         v-if="scannerOpen"
         ref="scanner"
-        :class="{ 'hidden-for-dynamsoft': isMrzCameraMode }"
-        :formats="['qr_code', 'pdf417', 'pdf417_enhanced', 'mrz']"
-        :scan-mode="'first'"
+        :scan-mode="first"
+        :scan-type="scanType"
         :license-key="licenseKey"
         tip-text="Position barcode or ID inside the frame"
         @result="onResult"
@@ -95,8 +106,8 @@
 </template>
 
 <script>
-import {computed, ref} from 'vue';
 import OpticalScanner from '../../components/OpticalScanner.vue';
+import {ref} from 'vue';
 
 export default {
   name: 'ScannerDemo',
@@ -107,12 +118,19 @@ export default {
     const scanResult = ref(null);
     const scanError = ref(null);
 
+    // Add scan type selection
+    const scanType = ref('barcode'); // Default to more common use case
+    const scanTypeOptions = [
+      {label: 'Passport / ID Card (MRZ)', value: 'mrz'},
+      {label: 'QR Code / PDF417 Barcode', value: 'barcode'}
+    ];
+
     // Replace with your real license key
     // eslint-disable-next-line max-len
-    const licenseKey = '';
+    const licenseKey = 'DLS2eyJoYW5kc2hha2VDb2RlIjoiMTA0Mzg4NzQyLU1UQTBNemc0TnpReUxYZGxZaTFVY21saGJGQnliMm8iLCJtYWluU2VydmVyVVJMIjoiaHR0cHM6Ly9tZGxzLmR5bmFtc29mdG9ubGluZS5jb20iLCJvcmdhbml6YXRpb25JRCI6IjEwNDM4ODc0MiIsInN0YW5kYnlTZXJ2ZXJVUkwiOiJodHRwczovL3NkbHMuZHluYW1zb2Z0b25saW5lLmNvbSIsImNoZWNrQ29kZSI6LTEyODY3MDMzOTB9';
 
     function openScanner() {
-      console.log('openScanner called in ScannerDemo');
+      console.log('openScanner called, scanType:', scanType.value);
       scanResult.value = null;
       scanError.value = null;
       scannerOpen.value = true;
@@ -123,6 +141,7 @@ export default {
       // Kick off scanAny after scanner is mounted
       setTimeout(async () => {
         console.log('setTimeout callback - scanner.value:', !!scanner.value);
+
         if(scanner.value) {
           try {
             console.log('About to call scanAny');
@@ -157,32 +176,24 @@ export default {
       // scannerOpen.value = false;
     }
 
-    const currentFormats = ref(['mrz']);
-    const isMrzCameraMode = computed(() => {
-      // or however you want to determine this
-      return currentFormats.value.includes('mrz');
-    });
-
     return {
       scanner,
       scannerOpen,
       scanResult,
       scanError,
+      scanType,
+      scanTypeOptions,
       licenseKey,
       openScanner,
       onResult,
       onError,
-      stopScanner,
-      isMrzCameraMode
+      stopScanner
     };
   }
 };
 </script>
 
 <style>
-.hidden-for-dynamsoft {
-  display: none;
-}
 
 /* Global styles - not scoped so they can affect Dynamsoft elements */
 .mrz-scanner-main-container,

@@ -3,7 +3,7 @@
     ref="scannerUIRef"
     :tip-text="tipText"
     :show-qr-box="showQrBox"
-    :formats="formats"
+    :formats="scanConfig.formats"
     :loading="loading"
     :scanning="scanning"
     :camera-error="cameraError"
@@ -41,9 +41,14 @@ export default {
     ScannerUI
   },
   props: {
-    formats: {
-      type: Array,
-      default: () => ['qr_code', 'pdf417', 'pdf417_enhanced', 'mrz']
+    // formats: {
+    //   type: Array,
+    //   default: () => ['qr_code', 'pdf417', 'pdf417_enhanced', 'mrz']
+    // },
+    scanType: {
+      type: String,
+      required: true,
+      validator: value => ['mrz', 'barcode'].includes(value)
     },
     scanMode: {
       type: String,
@@ -102,6 +107,23 @@ export default {
 
     const cameraOn = computed(() => !!stream);
 
+    // Derive formats and configuration from scanType
+    const scanConfig = computed(() => {
+      if(props.scanType === 'mrz') {
+        return {
+          formats: ['mrz'],
+          mrzMode: 'camera',
+          useContinuousScanning: false
+        };
+      } else {
+        return {
+          formats: ['qr_code', 'pdf417_enhanced', 'pdf417'],
+          mrzMode: 'element', // Won't be used since no MRZ in formats
+          useContinuousScanning: true
+        };
+      }
+    });
+
     // Lifecycle hooks
     onMounted(async () => {
       await initializeScanner();
@@ -117,9 +139,12 @@ export default {
 
     // --- Initialization ---
     async function initializeScanner() {
-      const plugins = getPluginsForFormats(props.formats);
+      // const plugins = getPluginsForFormats(props.formats);
+      const plugins = getPluginsForFormats(scanConfig.value.formats);
       console.log('Initializing scanner with plugins:', plugins);
-      console.log('Formats requested:', props.formats);
+      console.log('Scan type:', props.scanType);
+      console.log('Derived formats:', scanConfig.value.formats);
+      // console.log('Formats requested:', props.formats);
 
       // === Dynamsoft Native Camera UI Configuration Options ===
       const scannerViewConfig = {
@@ -140,20 +165,15 @@ export default {
         enableResultVerification: true // Allow result editing
       };
 
-      // Store pluginOptions for later reuse
-      // FIXME: parameterize mrzMode down the line
+      // Update plugin options to use computed config
       scannerPluginOptions = {
         mrz: props.licenseKey ? {
           licenseKey: props.licenseKey,
-          mrzMode: 'camera', // for Dynamsoft Native UI -- Working smoothly
-          // mrzMode: 'element', // for custom UI -- FIXME - not working
+          mrzMode: scanConfig.value.mrzMode,
           scannerConfig: {
             scannerViewConfig,
             resultViewConfig
           }
-          // TODO: Comeback - below parameters are not fully configured
-          // timeout: 25000, // Plugin-level timeout
-          // returnCroppedImage: false, // Faster processing
         } : undefined,
         pdf417_enhanced: props.licenseKey ? {
           licenseKey: props.licenseKey,
@@ -161,6 +181,32 @@ export default {
           parseDL: true
         } : undefined
       };
+
+      // === first iteration starts - working code ===
+
+      // Store pluginOptions for later reuse
+      // FIXME: parameterize mrzMode down the line
+      // scannerPluginOptions = {
+      //   mrz: props.licenseKey ? {
+      //     licenseKey: props.licenseKey,
+      //     mrzMode: 'camera', // for Dynamsoft Native UI -- Working smoothly
+      //     // mrzMode: 'element', // for custom UI -- FIXME - not working
+      //     scannerConfig: {
+      //       scannerViewConfig,
+      //       resultViewConfig
+      //     }
+      //     // TODO: Comeback - below parameters are not fully configured
+      //     // timeout: 25000, // Plugin-level timeout
+      //     // returnCroppedImage: false, // Faster processing
+      //   } : undefined,
+      //   pdf417_enhanced: props.licenseKey ? {
+      //     licenseKey: props.licenseKey,
+      //     useDynamsoft: true,
+      //     parseDL: true
+      //   } : undefined
+      // };
+
+      // === first iteration ends - working code ===
 
       // OpticalScanner Instance Initialization
       opticalScanner = new CoreScanner({
@@ -199,6 +245,7 @@ export default {
       cameraError.value = false;
 
       try {
+        // FIXME -- DO NOT HARDCODE -- update it bedrock-web-optical-scanner lib
         // const defaultConstraints = cameraUtils.getDefaultConstraints();
         const defaultConstraints = {
           video: {
@@ -434,6 +481,7 @@ export default {
           video.value?.videoWidth, 'x', video.value?.videoHeight);
 
         try {
+          console.log('Perform Scan: Scan Mode - ', props.scanMode);
           // performScan will add the stored scannerPluginOptions
           await performScan({
             // formats: continuousFormats, // Exclude MRZ
@@ -448,6 +496,7 @@ export default {
       }
     }
 
+    // FIXME - DID NOT WORKED AS EXPECTED
     // async function scanMRZ() {
     //   console.log('Starting on-demand MRZ scan');
     //   return performScan({
@@ -462,9 +511,6 @@ export default {
       console.log('Format:', result.format);
       console.log('Full result object:', result);
       console.log('result.data:', result.data);
-      console.log('result.driverLicense:', result.driverLicense);
-      console.log('result.fields:', result.fields);
-      console.log('result.text:', result.text);
       console.log('=== END RAW RESULT ===');
       switch(result.format) {
         case 'mrz':
@@ -601,7 +647,7 @@ export default {
       };
     }
 
-    // --- File Upload Scanning ---
+    // --- File Upload Scanning --- NOT TESTED
     async function onFileUpload(files) {
       if(!files || files.length === 0 || !opticalScanner) {
         return;
@@ -612,7 +658,8 @@ export default {
       try {
         for(const file of files) {
           const results = await opticalScanner.scan(file, {
-            formats: props.formats,
+            // formats: props.formats,
+            formats: scanConfig.value.formats, // Use computed formats
             mode: props.scanMode
           });
 
@@ -687,32 +734,48 @@ export default {
 
     // --- Public Method: ScanAny ---
     async function scanAny(timeoutMs = 12000) {
-      console.log('scanAny called, cameraOn:', cameraOn.value);
+      // console.log('scanAny called, cameraOn:', cameraOn.value);
+      console.log('scanAny called, scanType:',
+        props.scanType, 'cameraOn:', cameraOn.value);
+
+      // Use computed scanConfig instead of checking formats directly
+      const isMrzCameraMode = props.scanType === 'mrz';
+
+      // === first iteration starts - working code ===
 
       // Check for MRZ camera mode FIRST (before starting camera)
-      const isMrzCameraMode =
-        scannerPluginOptions?.mrz?.mrzMode === 'camera' &&
-        props.formats.includes('mrz');
+      // const isMrzCameraMode =
+      //   scannerPluginOptions?.mrz?.mrzMode === 'camera' &&
+      //   props.formats.includes('mrz');
+
+      // === first iteration ends - working code ===
 
       // Start camera first if not already started
       if(!cameraOn.value) {
         console.log('scanAny: Camera not started, starting camera first...');
         // Pass isMrzCameraMode flag to prevent continuous scanning
-        await startCamera({skipContinuousScanning: isMrzCameraMode});
+        // await startCamera({skipContinuousScanning: isMrzCameraMode});
+        await startCamera({
+          skipContinuousScanning: !scanConfig.value.useContinuousScanning
+        });
       }
 
       // Check for MRZ camera mode
       if(isMrzCameraMode) {
-        console.log('Launching Dynamsoft camera UI...');
+        console.log('Launching Dynamsoft camera UI for MRZ scanning...');
         return performScan({
           formats: ['mrz'],
           mode: 'first'
         }, 0); // Single scan with 0 timeout
       }
-      // Logic for other formats
+      // Logic for other qr_code or pdf417 barcode scanning
+      console.log('Using continuous scanning for barcode types');
       return performScan({
-        formats: opticalScanner.getSupportedFormats(),
-        mode: props.scanMode}, timeoutMs);
+        // formats: opticalScanner.getSupportedFormats(),
+        formats: scanConfig.value.formats,
+        mode: props.scanMode
+      },
+      timeoutMs);
     }
 
     return {
@@ -723,6 +786,7 @@ export default {
       capabilities,
       cameraConstraints,
       cameraOn,
+      scanConfig,
       startCamera,
       handleClose,
       toggleTorch,

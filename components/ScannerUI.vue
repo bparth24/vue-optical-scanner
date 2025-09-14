@@ -170,13 +170,16 @@
       </div>
 
       <!-- Add this debug info right above the Start/Stop Controls -->
+    <!--
       <div
         class="absolute-top q-pa-sm text-white text-caption"
         style="background: rgba(0,0,0,0.5);">
         DEBUG: cameraOn={{cameraOn}}, loading={{loading}}, scanning={{scanning}}
       </div>
-
-      <!-- Start/Stop Controls (always visible on top of video) -->
+    -->
+      <!-- FIXME: DID NOT WORKED AS EXPECTED
+        Start/Stop Controls (always visible on top of video) -->
+    <!--
       <div class="absolute-bottom q-pa-md row justify-center controls-bar">
         <q-btn
           v-if="!cameraOn"
@@ -195,6 +198,7 @@
           class="q-mx-sm"
           @click="handleStopScan" />
       </div>
+    -->
     </div>
   </div>
 </template>
