@@ -1,0 +1,199 @@
+<template>
+  <div class="q-pa-md">
+    <!-- Controls row, always visible -->
+    <div class="row q-gutter-sm q-mb-md">
+      <q-btn
+        label="Start Scan"
+        color="primary"
+        @click="openScanner" />
+      <q-btn
+        label="Stop Scan"
+        color="negative"
+        @click="stopScanner" />
+    </div>
+
+    <!-- Scanner Modal -->
+    <q-dialog
+      v-model="scannerOpen"
+      maximized
+      persistent>
+      <OpticalScanner
+        v-if="scannerOpen"
+        ref="scanner"
+        :class="{ 'hidden-for-dynamsoft': isMrzCameraMode }"
+        :formats="['qr_code', 'pdf417', 'pdf417_enhanced', 'mrz']"
+        :scan-mode="'first'"
+        :license-key="licenseKey"
+        tip-text="Position barcode or ID inside the frame"
+        @result="onResult"
+        @error="onError"
+        @close="scannerOpen = false" />
+    </q-dialog>
+
+    <!-- Result Display -->
+    <div
+      v-if="scanResult"
+      class="q-mt-md">
+      <q-card>
+        <q-card-section>
+          <div class="text-h6">
+            Scan Result
+          </div>
+
+          <!-- MRZ -->
+          <div v-if="scanResult.type === 'MRZ'">
+            <div
+              v-if="scanResult.valid"
+              class="text-green text-subtitle2">
+              MRZ Valid
+            </div>
+            <div
+              v-else
+              class="text-red text-subtitle2">
+              MRZ Invalid
+            </div>
+            <ul>
+              <li
+                v-for="(val, key) in scanResult.fields"
+                :key="key">
+                <strong>{{key}}:</strong> {{val}}
+              </li>
+            </ul>
+          </div>
+
+          <!-- Driver License -->
+          <div v-else-if="scanResult.type === 'DL'">
+            <ul>
+              <li
+                v-for="(val, key) in scanResult.fields"
+                :key="key">
+                <strong>{{key}}:</strong> {{val}}
+              </li>
+            </ul>
+          </div>
+
+          <!-- QR Code or PDF417 (plain text only) -->
+          <div v-else>
+            <p><strong>Type:</strong> {{scanResult.type}}</p>
+            <p style="word-break: break-all; white-space: pre-wrap;">
+              <strong>Data:</strong> {{scanResult.text}}
+            </p>
+          </div>
+        </q-card-section>
+      </q-card>
+    </div>
+
+    <!-- Error Display -->
+    <div
+      v-if="scanError"
+      class="q-mt-md text-red">
+      <q-banner dense>
+        {{scanError}}
+      </q-banner>
+    </div>
+  </div>
+</template>
+
+<script>
+import {computed, ref} from 'vue';
+import OpticalScanner from '../../components/OpticalScanner.vue';
+
+export default {
+  name: 'ScannerDemo',
+  components: {OpticalScanner},
+  setup() {
+    const scanner = ref(null);
+    const scannerOpen = ref(false);
+    const scanResult = ref(null);
+    const scanError = ref(null);
+
+    // Replace with your real license key
+    // eslint-disable-next-line max-len
+    const licenseKey = 'DLS2eyJoYW5kc2hha2VDb2RlIjoiMTA0Mzg4NzQyLU1UQTBNemc0TnpReUxYZGxZaTFVY21saGJGQnliMm8iLCJtYWluU2VydmVyVVJMIjoiaHR0cHM6Ly9tZGxzLmR5bmFtc29mdG9ubGluZS5jb20iLCJvcmdhbml6YXRpb25JRCI6IjEwNDM4ODc0MiIsInN0YW5kYnlTZXJ2ZXJVUkwiOiJodHRwczovL3NkbHMuZHluYW1zb2Z0b25saW5lLmNvbSIsImNoZWNrQ29kZSI6LTEyODY3MDMzOTB9';
+
+    function openScanner() {
+      console.log('openScanner called in ScannerDemo');
+      scanResult.value = null;
+      scanError.value = null;
+      scannerOpen.value = true;
+
+      // Auto-start camera when modal opens (remove setTimeout)
+      // Remove the scanAny() call here - let it happen naturally
+
+      // Kick off scanAny after scanner is mounted
+      setTimeout(async () => {
+        console.log('setTimeout callback - scanner.value:', !!scanner.value);
+        if(scanner.value) {
+          try {
+            console.log('About to call scanAny');
+            // you can start camera explicitly
+            // await scanner.value.startCamera();
+            // then start scan
+            await scanner.value.scanAny();
+          } catch(err) {
+            console.log('scanAny error:', err);
+            scanError.value = err.message || 'Scan failed';
+          }
+        } else {
+          console.log('scanner.value is null/undefined');
+        }
+      }, 2000);
+    }
+
+    function onResult(result) {
+      scanResult.value = result;
+      scanError.value = null; // Clear any previous errors
+      scannerOpen.value = false;
+    }
+
+    function onError(error) {
+      scanError.value = error.message || 'Error occurred';
+    }
+
+    function stopScanner() {
+      if(scanner.value) {
+        scanner.value.stopCamera();
+      }
+      // scannerOpen.value = false;
+    }
+
+    const currentFormats = ref(['mrz']);
+    const isMrzCameraMode = computed(() => {
+      // or however you want to determine this
+      return currentFormats.value.includes('mrz');
+    });
+
+    return {
+      scanner,
+      scannerOpen,
+      scanResult,
+      scanError,
+      licenseKey,
+      openScanner,
+      onResult,
+      onError,
+      stopScanner,
+      isMrzCameraMode
+    };
+  }
+};
+</script>
+
+<style>
+.hidden-for-dynamsoft {
+  display: none;
+}
+
+/* Global styles - not scoped so they can affect Dynamsoft elements */
+.mrz-scanner-main-container,
+.mrz-scanner-scanner-view-container,
+.dynamsoft-mrz-loading-screen {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 99999 !important;
+  background: white !important;
+}
+</style>

@@ -1,0 +1,66 @@
+{
+  "name": "@bedrock/vue-optical-scanner",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Vue-specific UI component library consumes the bedrock-web-optical-scanner for all scanning logic, provides reusable Vue components for optical scanning UIs, replaces the combined scanning+UI approach in existing libraries",
+  "exports": {
+    ".": "./lib/index.js",
+    "./components/": "./components/"
+  },
+  "files": [
+    "components/*",
+    "lib/*"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint --ext .cjs,.js,.vue .",
+    "lint:fix": "eslint --ext .cjs,.js,.vue . --fix"
+  },
+  "dependencies": {
+    "@bedrock/web-optical-scanner": "file:../bedrock-web-optical-scanner"
+  },
+  "peerDependencies": {
+    "@bedrock/quasar": "^10.0.0",
+    "@bedrock/web-fontawesome": "^2.0.0",
+    "vue": "^3.4.21"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.1",
+    "eslint": "^8.57.1",
+    "eslint-config-digitalbazaar": "^5.2.0",
+    "eslint-plugin-jsdoc": "^51.4.1",
+    "eslint-plugin-quasar": "^1.1.0",
+    "eslint-plugin-unicorn": "^56.0.1",
+    "eslint-plugin-vue": "^9.23.0",
+    "jsdoc": "^4.0.2",
+    "jsdoc-to-markdown": "^9.0.2",
+    "vite": "^7.1.5",
+    "vue": "^3.4.21"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bparth24/vue-optical-scanner"
+  },
+  "keywords": [
+    "bedrock",
+    "vue",
+    "optical",
+    "scanner",
+    "barcode",
+    "qr",
+    "pdf417",
+    "mrz"
+  ],
+  "author": {
+    "name": "Digital Bazaar, Inc."
+  },
+  "bugs": {
+    "url": "https://github.com/bparth24/vue-optical-scanner/issues"
+  },
+  "homepage": "https://github.com/bparth24/vue-optical-scanner"
+}
